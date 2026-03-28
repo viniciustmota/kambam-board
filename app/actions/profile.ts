@@ -1,5 +1,6 @@
 'use server'
 
+import { put } from '@vercel/blob'
 import { verifySession } from '@/lib/dal'
 import { getUserProfile, updateUserProfile, changePassword, updateAvatar } from '@/services/userService'
 
@@ -51,20 +52,11 @@ export async function uploadAvatarAction(formData: FormData) {
     const file = formData.get('file') as File
     if (!file || file.size === 0) throw new Error('Arquivo inválido')
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const { writeFile, mkdir } = await import('fs/promises')
-    const { join } = await import('path')
-    const dir = join(process.cwd(), 'public', 'uploads', 'avatars', userId)
-    await mkdir(dir, { recursive: true })
-    const filename = `avatar.${ext}`
-    await writeFile(join(dir, filename), buffer)
+    const blob = await put(`avatars/${userId}/avatar.${ext}`, file, { access: 'public' })
 
-    const avatarUrl = `/uploads/avatars/${userId}/${filename}`
-    await updateAvatar(userId, avatarUrl)
-    return { avatarUrl }
+    await updateAvatar(userId, blob.url)
+    return { avatarUrl: blob.url }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Erro ao fazer upload' }
   }
