@@ -87,6 +87,15 @@ export async function getGlobalKPIs(boardId: string) {
   }
 }
 
+export async function getSprintsWithMetrics(boardId: string) {
+  const sprints = await prisma.sprint.findMany({
+    where: { boardId },
+    orderBy: { createdAt: 'asc' },
+  })
+  const metricsArray = await Promise.all(sprints.map(s => getSprintMetrics(s.id)))
+  return sprints.map((sprint, i) => ({ sprint, metrics: metricsArray[i] }))
+}
+
 export async function getSprintDashboard(sprintId: string) {
   const sprint = await prisma.sprint.findUnique({ where: { id: sprintId } })
   if (!sprint) throw new NotFoundError(`Sprint não encontrado: ${sprintId}`)

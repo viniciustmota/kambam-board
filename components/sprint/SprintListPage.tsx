@@ -11,34 +11,76 @@ interface Sprint {
   status: 'PLANNED' | 'ACTIVE' | 'COMPLETED'
   startDate: Date | string | null | undefined
   endDate: Date | string | null | undefined
+  qualidade: number | null | undefined
+  dificuldade: number | null | undefined
+}
+
+interface SprintMetrics {
+  horasTotais: number
+  custoTotal: number
+  cardsTotal: number
+  cardsConcluidos: number
+  cardsAtrasados: number
+}
+
+interface SprintWithMetrics {
+  sprint: Sprint
+  metrics: SprintMetrics
 }
 
 interface SprintListPageProps {
-  sprints: Sprint[]
+  sprintsWithMetrics: SprintWithMetrics[]
   boardId: string
 }
 
 function formatDate(date: Date | string | null | undefined) {
   if (!date) return null
-  const d = new Date(date)
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function SprintListPage({ sprints: initialSprints, boardId }: SprintListPageProps) {
-  const [sprints, setSprints] = useState(initialSprints)
+function formatHours(h: number) {
+  const hh = Math.floor(h)
+  const mm = Math.round((h - hh) * 60)
+  return `${hh}h ${mm.toString().padStart(2, '0')}m`
+}
+
+function formatCurrency(v: number) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function ProgressBar({ value, total }: { value: number; total: number }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+        <div
+          className="h-full bg-blue-500 rounded-full transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs font-semibold text-gray-700 w-9 text-right">{pct}%</span>
+    </div>
+  )
+}
+
+export default function SprintListPage({ sprintsWithMetrics: initial, boardId }: SprintListPageProps) {
+  const [sprintsWithMetrics, setSprintsWithMetrics] = useState(initial)
   const [showCreate, setShowCreate] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
-      <div className="max-w-4xl mx-auto px-4 py-8 pb-24">
+      <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Sprints</h1>
-            <p className="text-sm text-gray-500 mt-1">{sprints.length} sprint{sprints.length !== 1 ? 's' : ''}</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {sprintsWithMetrics.length} sprint{sprintsWithMetrics.length !== 1 ? 's' : ''}
+            </p>
           </div>
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => setShowCreate(v => !v)}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,75 +90,139 @@ export default function SprintListPage({ sprints: initialSprints, boardId }: Spr
           </button>
         </div>
 
-        {/* Sprint list */}
-        {sprints.length === 0 && !showCreate ? (
-          <div className="text-center py-16">
+        {/* Create form */}
+        {showCreate && (
+          <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <SprintManager
+              boardId={boardId}
+              sprints={sprintsWithMetrics.map(i => i.sprint)}
+              onSprintCreated={(sprint) => {
+                setSprintsWithMetrics(prev => [...prev, {
+                  sprint: {
+                    ...sprint,
+                    startDate: sprint.startDate ?? null,
+                    endDate: sprint.endDate ?? null,
+                    qualidade: null,
+                    dificuldade: null,
+                  },
+                  metrics: { horasTotais: 0, custoTotal: 0, cardsTotal: 0, cardsConcluidos: 0, cardsAtrasados: 0 },
+                }])
+                setShowCreate(false)
+              }}
+            />
+            <button onClick={() => setShowCreate(false)} className="mt-3 text-xs text-gray-400 hover:text-gray-600">
+              Cancelar
+            </button>
+          </div>
+        )}
+
+        {/* Sprint cards */}
+        {sprintsWithMetrics.length === 0 && !showCreate ? (
+          <div className="text-center py-20">
             <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <p className="text-gray-400 text-sm">Nenhuma sprint criada ainda</p>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="mt-3 text-blue-600 text-sm hover:underline"
-            >
+            <button onClick={() => setShowCreate(true)} className="mt-2 text-blue-600 text-sm hover:underline">
               Criar a primeira sprint
             </button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {sprints.map(sprint => (
-              <div
-                key={sprint.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h2 className="font-semibold text-gray-900 truncate">{sprint.name}</h2>
-                    <SprintBadge name="" status={sprint.status} />
-                  </div>
-                  {(sprint.startDate || sprint.endDate) && (
-                    <p className="text-xs text-gray-400">
-                      {formatDate(sprint.startDate)} — {formatDate(sprint.endDate)}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href={`/dashboard/sprint/${sprint.id}`}
-                    className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 border border-gray-200 rounded-lg transition-colors"
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href={`/sprints/${sprint.id}`}
-                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                    aria-label={`Abrir board da ${sprint.name}`}
-                  >
-                    Abrir Board
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            {sprintsWithMetrics.map(({ sprint, metrics }) => {
+              const pct = metrics.cardsTotal > 0
+                ? Math.round((metrics.cardsConcluidos / metrics.cardsTotal) * 100)
+                : 0
 
-        {/* Create sprint form */}
-        {showCreate && (
-          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <SprintManager
-              boardId={boardId}
-              sprints={sprints}
-              onSprintCreated={(sprint) => {
-                setSprints(prev => [...prev, { ...sprint, startDate: sprint.startDate ?? null, endDate: sprint.endDate ?? null }])
-                setShowCreate(false)
-              }}
-            />
-            <button
-              onClick={() => setShowCreate(false)}
-              className="mt-3 text-sm text-gray-400 hover:text-gray-600"
-            >
-              Cancelar
-            </button>
+              return (
+                <Link
+                  key={sprint.id}
+                  href={`/sprints/${sprint.id}`}
+                  className="block bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-blue-200 transition-all group"
+                >
+                  {/* Sprint header row */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-blue-700 transition-colors truncate">
+                          {sprint.name}
+                        </h2>
+                        <SprintBadge name="" status={sprint.status} />
+                      </div>
+                      {(sprint.startDate || sprint.endDate) && (
+                        <p className="text-xs text-gray-400">
+                          {formatDate(sprint.startDate) ?? '—'} → {formatDate(sprint.endDate) ?? '—'}
+                        </p>
+                      )}
+                    </div>
+                    <svg className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+
+                  {/* Progress bar */}
+                  {metrics.cardsTotal > 0 && (
+                    <div className="mb-3">
+                      <ProgressBar value={metrics.cardsConcluidos} total={metrics.cardsTotal} />
+                    </div>
+                  )}
+
+                  {/* Metrics grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Cards</p>
+                      <p className="text-sm font-semibold text-gray-800">
+                        {metrics.cardsConcluidos}/{metrics.cardsTotal}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Progresso</p>
+                      <p className="text-sm font-semibold text-gray-800">{pct}%</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Horas</p>
+                      <p className="text-sm font-semibold text-gray-800">{formatHours(metrics.horasTotais)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Custo</p>
+                      <p className="text-sm font-semibold text-gray-800">{formatCurrency(metrics.custoTotal)}</p>
+                    </div>
+                  </div>
+
+                  {/* Quality / Difficulty */}
+                  {(sprint.qualidade != null || sprint.dificuldade != null) && (
+                    <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50">
+                      {sprint.qualidade != null && (
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs text-gray-500">Qualidade</span>
+                          <span className="text-xs font-bold text-gray-700">{sprint.qualidade}/10</span>
+                        </div>
+                      )}
+                      {sprint.dificuldade != null && (
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <span className="text-xs text-gray-500">Dificuldade</span>
+                          <span className="text-xs font-bold text-gray-700">{sprint.dificuldade}/10</span>
+                        </div>
+                      )}
+                      {metrics.cardsAtrasados > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs text-red-600 font-medium">{metrics.cardsAtrasados} atrasado{metrics.cardsAtrasados !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

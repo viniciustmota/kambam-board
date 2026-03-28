@@ -11,7 +11,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import prisma from '@/lib/prisma'
-import { getSprintMetrics, getUserMetrics, getGlobalKPIs, getSprintDashboard } from '@/services/dashboardService'
+import { getSprintMetrics, getUserMetrics, getGlobalKPIs, getSprintDashboard, getSprintsWithMetrics } from '@/services/dashboardService'
 
 const mockPrisma = prisma as {
   sprint: { findMany: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn> }
@@ -94,5 +94,32 @@ describe('getSprintDashboard', () => {
   it('throws NotFoundError when sprint does not exist', async () => {
     mockPrisma.sprint.findUnique.mockResolvedValue(null)
     await expect(getSprintDashboard('nonexistent')).rejects.toThrow(/não encontrado/i)
+  })
+})
+
+describe('getSprintsWithMetrics', () => {
+  it('returns each sprint paired with its metrics', async () => {
+    mockPrisma.sprint.findMany.mockResolvedValue([
+      { id: 's1', name: 'Sprint 1', boardId: 'b1' },
+      { id: 's2', name: 'Sprint 2', boardId: 'b1' },
+    ])
+    mockPrisma.timeEntry.findMany.mockResolvedValue([
+      { duration: 3600, user: { valorHora: 100 } },
+    ])
+    mockPrisma.card.findMany.mockResolvedValue([
+      { id: 'c1', endDate: null, column: { title: 'Concluído' } },
+    ])
+    const result = await getSprintsWithMetrics('b1')
+    expect(result).toHaveLength(2)
+    expect(result[0].sprint.name).toBe('Sprint 1')
+    expect(result[0].metrics).toHaveProperty('horasTotais')
+    expect(result[0].metrics).toHaveProperty('custoTotal')
+    expect(result[0].metrics).toHaveProperty('cardsTotal')
+  })
+
+  it('returns empty array when no sprints exist', async () => {
+    mockPrisma.sprint.findMany.mockResolvedValue([])
+    const result = await getSprintsWithMetrics('b1')
+    expect(result).toHaveLength(0)
   })
 })

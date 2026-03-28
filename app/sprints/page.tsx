@@ -1,19 +1,24 @@
 import { getOrCreateBoard } from '@/app/actions'
-import { getSprintsForBoardAction } from '@/app/actions/sprints'
+import { getSprintsWithMetricsAction } from '@/app/actions/dashboard'
 import SprintListPage from '@/components/sprint/SprintListPage'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SprintsPage() {
   const { boardId } = await getOrCreateBoard()
-  const sprints = await getSprintsForBoardAction(boardId)
+  const result = await getSprintsWithMetricsAction(boardId)
+
+  const sprintsWithMetrics = Array.isArray(result) ? result.map(item => ({
+    sprint: {
+      ...item.sprint,
+      status: item.sprint.status as 'PLANNED' | 'ACTIVE' | 'COMPLETED',
+    },
+    metrics: item.metrics,
+  })) : []
 
   return (
     <SprintListPage
-      sprints={(sprints ?? []).map(s => ({
-        ...s,
-        status: s.status as 'PLANNED' | 'ACTIVE' | 'COMPLETED',
-      }))}
+      sprintsWithMetrics={sprintsWithMetrics}
       boardId={boardId}
     />
   )
