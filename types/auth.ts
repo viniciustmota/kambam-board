@@ -2,6 +2,7 @@ export interface SessionPayload {
   userId: string
   role: string
   expiresAt: Date
+  tokenVersion?: number
 }
 
 export type FormState = {

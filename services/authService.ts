@@ -55,5 +55,5 @@ export async function login(input: { email: string; password: string }) {
     throw new AuthError('Credenciais inválidas')
   }
 
-  return { userId: user.id, role: user.role }
+  return { userId: user.id, role: user.role, tokenVersion: user.tokenVersion }
 }

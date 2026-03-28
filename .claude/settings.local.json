@@ -4,7 +4,8 @@
       "Bash(npm install:*)"
     ],
     "additionalDirectories": [
-      "c:\\temp\\ClaudeCode\\kanban-board\\app\\dashboard\\sprint"
+      "c:\\temp\\ClaudeCode\\kanban-board\\app\\dashboard\\sprint",
+      "C:\\temp\\ClaudeCode\\kanban-board\\app\\api"
     ]
   }
 }

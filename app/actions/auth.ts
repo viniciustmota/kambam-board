@@ -16,7 +16,7 @@ export async function signupAction(prevState: FormState, formData: FormData): Pr
   try {
     const user = await register({ name, email, password })
     const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
-    const token = await encrypt({ userId: user.id, role: user.role, expiresAt })
+    const token = await encrypt({ userId: user.id, role: user.role, tokenVersion: user.tokenVersion, expiresAt })
     const cookieStore = await cookies()
     cookieStore.set('session', token, {
       httpOnly: true,
@@ -40,9 +40,9 @@ export async function loginAction(prevState: FormState, formData: FormData): Pro
   const password = formData.get('password') as string
 
   try {
-    const { userId, role } = await login({ email, password })
+    const { userId, role, tokenVersion } = await login({ email, password })
     const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
-    const token = await encrypt({ userId, role, expiresAt })
+    const token = await encrypt({ userId, role, tokenVersion, expiresAt })
     const cookieStore = await cookies()
     cookieStore.set('session', token, {
       httpOnly: true,
