@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import SprintBoard from '@/components/sprint/SprintBoard'
 
 vi.mock('@hello-pangea/dnd', () => ({
@@ -24,6 +24,11 @@ vi.mock('@/app/actions/sprintBoard', () => ({
 vi.mock('@/app/actions/tags', () => ({
   assignTagToCardAction: vi.fn(),
   removeTagFromCardAction: vi.fn(),
+  createTagAction: vi.fn(),
+}))
+
+vi.mock('@/app/actions/auth', () => ({
+  logoutAction: vi.fn(),
 }))
 
 vi.mock('@/app/actions/time', () => ({
@@ -132,9 +137,32 @@ describe('SprintBoard', () => {
 
   it('column header has inline editable title', () => {
     render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
-    // InlineEdit renders the title as a span/button or editable element
-    // The title text should be present (A Fazer appears in the ColumnHeader via InlineEdit)
     const titles = screen.getAllByText('A Fazer')
     expect(titles.length).toBeGreaterThanOrEqual(1)
+  })
+
+  // Header parity with SprintListPage
+  it('renders global search input', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    expect(screen.getByRole('searchbox', { name: /busca global/i })).toBeInTheDocument()
+  })
+
+  it('renders board action menu button', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    expect(screen.getByRole('button', { name: /board actions/i })).toBeInTheDocument()
+  })
+
+  it('renders user avatar and name when currentUser is passed', () => {
+    const currentUser = { id: 'u1', name: 'Ana Lima', email: 'ana@example.com', avatarUrl: null }
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" currentUser={currentUser} />)
+    expect(screen.getByRole('button', { name: /menu do usuário/i })).toBeInTheDocument()
+    expect(screen.getAllByText('Ana Lima').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('opens CSV import modal via action menu', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    fireEvent.click(screen.getByRole('button', { name: /board actions/i }))
+    fireEvent.click(screen.getByText(/importar csv/i))
+    expect(screen.getAllByText(/importar csv/i).length).toBeGreaterThanOrEqual(1)
   })
 })

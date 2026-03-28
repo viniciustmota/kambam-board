@@ -53,6 +53,7 @@ interface SprintBoardProps {
   boardId: string
   users?: { id: string; name: string; email: string; avatarUrl?: string | null }[]
   tags?: { id: string; name: string; color: string }[]
+  currentUser?: { id: string; name: string; email: string; avatarUrl?: string | null } | null
 }
 
 function toColumnType(col: SprintColumnData): ColumnType {
@@ -78,7 +79,7 @@ function toCardType(card: SprintCard, sprintId: string): CardType {
   }
 }
 
-export default function SprintBoard({ sprint, columns: initialColumns, boardId, users, tags }: SprintBoardProps) {
+export default function SprintBoard({ sprint, columns: initialColumns, boardId, users, tags, currentUser }: SprintBoardProps) {
   const [columns, setColumns] = useState(initialColumns)
   const [newColTitle, setNewColTitle] = useState('')
   const [addingCol, setAddingCol] = useState(false)
@@ -182,7 +183,7 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex flex-col pb-16">
-      <SprintHeader sprint={sprint} />
+      <SprintHeader sprint={sprint} boardId={boardId} currentUser={currentUser} tags={tags} />
       <div className="flex-1 overflow-x-auto p-4">
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="sprint-columns" direction="horizontal" type="COLUMN">

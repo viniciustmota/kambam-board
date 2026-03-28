@@ -1,4 +1,5 @@
 import { getSprintBoardAction } from '@/app/actions/sprintBoard'
+import { getCurrentUserAction } from '@/app/actions/users'
 import SprintBoard from '@/components/sprint/SprintBoard'
 import Link from 'next/link'
 
@@ -10,7 +11,10 @@ interface Props {
 
 export default async function SprintPage({ params }: Props) {
   const { sprintId } = await params
-  const result = await getSprintBoardAction(sprintId)
+  const [result, currentUser] = await Promise.all([
+    getSprintBoardAction(sprintId),
+    getCurrentUserAction(),
+  ])
 
   if ('error' in result) {
     return (
@@ -31,6 +35,7 @@ export default async function SprintPage({ params }: Props) {
       boardId={result.sprint.boardId}
       users={result.users}
       tags={result.tags}
+      currentUser={currentUser}
     />
   )
 }
