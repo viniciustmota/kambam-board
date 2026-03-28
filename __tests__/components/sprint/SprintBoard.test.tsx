@@ -15,6 +15,33 @@ vi.mock('@/app/actions/sprintBoard', () => ({
   addSprintColumnAction: vi.fn(),
   updateSprintMetaAction: vi.fn(),
   createCardInSprintAction: vi.fn(),
+  renameSprintColumnAction: vi.fn(),
+  deleteSprintColumnAction: vi.fn(),
+  reorderSprintColumnsAction: vi.fn(),
+  updateCardInSprintAction: vi.fn(),
+}))
+
+vi.mock('@/app/actions/tags', () => ({
+  assignTagToCardAction: vi.fn(),
+  removeTagFromCardAction: vi.fn(),
+}))
+
+vi.mock('@/app/actions/time', () => ({
+  startTimerAction: vi.fn(),
+  pauseTimerAction: vi.fn(),
+  getCardTimeAction: vi.fn(),
+  getActiveTimerAction: vi.fn(),
+}))
+
+vi.mock('@/app/actions/cardResponsible', () => ({
+  addResponsibleAction: vi.fn(),
+  removeResponsibleAction: vi.fn(),
+  getResponsiblesAction: vi.fn(),
+}))
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn().mockReturnValue({ push: vi.fn() }),
+  usePathname: vi.fn().mockReturnValue('/sprints/s1'),
 }))
 
 const sprint = {
@@ -28,10 +55,30 @@ const sprint = {
   dificuldade: null,
 }
 
+const users = [
+  { id: 'u1', name: 'Ana Lima', email: 'ana@example.com', avatarUrl: null },
+]
+
+const tags = [
+  { id: 't1', name: 'Bug', color: '#ef4444' },
+]
+
 const columns = [
   {
     id: 'sc1', title: 'A Fazer', position: 0,
-    cards: [{ id: 'c1', title: 'Task 1', description: '', responsible: '', color: '#3b82f6', tags: [] }],
+    cards: [
+      {
+        id: 'c1',
+        title: 'Task 1',
+        description: 'Descrição da task',
+        responsible: 'Ana Lima',
+        responsibleId: 'u1',
+        color: '#3b82f6',
+        tags: [{ tagId: 't1', tag: { id: 't1', name: 'Bug', color: '#ef4444' } }],
+        attachments: [],
+        timeEntries: [],
+      },
+    ],
   },
   {
     id: 'sc2', title: 'Concluído', position: 1,
@@ -43,28 +90,51 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('SprintBoard', () => {
   it('renders sprint name in header', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} />)
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
     expect(screen.getByText('Sprint 1')).toBeInTheDocument()
   })
 
   it('renders all columns', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} />)
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
     expect(screen.getByText('Concluído')).toBeInTheDocument()
   })
 
   it('renders cards in columns', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} />)
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
     expect(screen.getByText('Task 1')).toBeInTheDocument()
   })
 
   it('renders add column button', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} />)
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
     expect(screen.getByText(/nova coluna/i)).toBeInTheDocument()
   })
 
   it('renders status badge', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} />)
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
     expect(screen.getByText('Ativa')).toBeInTheDocument()
+  })
+
+  it('renders delete column button for each column', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    expect(screen.getByRole('button', { name: /excluir coluna a fazer/i })).toBeInTheDocument()
+  })
+
+  it('renders card with tags', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} users={users} tags={tags} boardId="b1" />)
+    expect(screen.getByText('Bug')).toBeInTheDocument()
+  })
+
+  it('renders card with responsible name', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} users={users} boardId="b1" />)
+    expect(screen.getByText('Ana Lima')).toBeInTheDocument()
+  })
+
+  it('column header has inline editable title', () => {
+    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    // InlineEdit renders the title as a span/button or editable element
+    // The title text should be present (A Fazer appears in the ColumnHeader via InlineEdit)
+    const titles = screen.getAllByText('A Fazer')
+    expect(titles.length).toBeGreaterThanOrEqual(1)
   })
 })

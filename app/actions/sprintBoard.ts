@@ -8,6 +8,9 @@ import {
   createSprintColumn,
   initSprintColumns,
   moveCardInSprint,
+  renameSprintColumn,
+  deleteSprintColumn,
+  reorderSprintColumns,
 } from '@/services/sprintColumnService'
 
 export async function getSprintBoardAction(sprintId: string) {
@@ -96,6 +99,65 @@ export async function createCardInSprintAction(input: {
     return { card }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Erro ao criar card' }
+  }
+}
+
+export async function renameSprintColumnAction(columnId: string, title: string) {
+  try {
+    await verifySession()
+    const column = await renameSprintColumn(columnId, title)
+    return { column }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Erro ao renomear coluna' }
+  }
+}
+
+export async function deleteSprintColumnAction(columnId: string) {
+  try {
+    await verifySession()
+    await deleteSprintColumn(columnId)
+    return { success: true }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Erro ao excluir coluna' }
+  }
+}
+
+export async function reorderSprintColumnsAction(columnIds: string[]) {
+  try {
+    await verifySession()
+    await reorderSprintColumns(columnIds)
+    return { success: true }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Erro ao reordenar colunas' }
+  }
+}
+
+export async function updateCardInSprintAction(
+  cardId: string,
+  data: {
+    title: string
+    description: string
+    responsible: string
+    color: string
+    responsibleId?: string | null
+  },
+) {
+  try {
+    await verifySession()
+    const card = await prisma.card.update({ where: { id: cardId }, data })
+    return { card }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Erro ao atualizar card' }
+  }
+}
+
+export async function deleteCardInSprintAction(cardId: string) {
+  try {
+    await verifySession()
+    await prisma.card.delete({ where: { id: cardId } })
+    return { success: true }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Erro ao excluir card' }
   }
 }
 

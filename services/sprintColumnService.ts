@@ -16,6 +16,8 @@ export async function getSprintColumns(sprintId: string) {
         include: {
           tags: { include: { tag: true } },
           responsibles: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+          attachments: { select: { id: true } },
+          timeEntries: { select: { duration: true } },
         },
       },
     },
@@ -37,4 +39,20 @@ export async function moveCardInSprint(cardId: string, sprintColumnId: string, s
     where: { id: cardId },
     data: { sprintColumnId, sprintPosition },
   })
+}
+
+export async function renameSprintColumn(columnId: string, title: string) {
+  return prisma.sprintColumn.update({ where: { id: columnId }, data: { title } })
+}
+
+export async function deleteSprintColumn(columnId: string) {
+  return prisma.sprintColumn.delete({ where: { id: columnId } })
+}
+
+export async function reorderSprintColumns(columnIds: string[]) {
+  return prisma.$transaction(
+    columnIds.map((id, position) =>
+      prisma.sprintColumn.update({ where: { id }, data: { position } })
+    )
+  )
 }

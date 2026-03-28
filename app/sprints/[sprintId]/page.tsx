@@ -28,6 +28,7 @@ export default async function SprintPage({ params }: Props) {
         status: result.sprint.status as 'PLANNED' | 'ACTIVE' | 'COMPLETED',
       }}
       columns={result.columns}
+      boardId={result.sprint.boardId}
       users={result.users}
       tags={result.tags}
     />

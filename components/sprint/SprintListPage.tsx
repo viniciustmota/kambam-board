@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { SprintBadge } from './SprintBadge'
 import { SprintManager } from './SprintManager'
+import { migrateOrphanCardsAction } from '@/app/actions/migration'
 
 interface Sprint {
   id: string
@@ -31,6 +33,7 @@ interface SprintWithMetrics {
 interface SprintListPageProps {
   sprintsWithMetrics: SprintWithMetrics[]
   boardId: string
+  orphanCount?: number
 }
 
 function formatDate(date: Date | string | null | undefined) {
@@ -63,13 +66,47 @@ function ProgressBar({ value, total }: { value: number; total: number }) {
   )
 }
 
-export default function SprintListPage({ sprintsWithMetrics: initial, boardId }: SprintListPageProps) {
+export default function SprintListPage({ sprintsWithMetrics: initial, boardId, orphanCount = 0 }: SprintListPageProps) {
   const [sprintsWithMetrics, setSprintsWithMetrics] = useState(initial)
   const [showCreate, setShowCreate] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  const [orphans, setOrphans] = useState(orphanCount)
+  const router = useRouter()
+
+  async function handleMigrate() {
+    setMigrating(true)
+    const result = await migrateOrphanCardsAction(boardId)
+    setMigrating(false)
+    if ('migrated' in result) {
+      setOrphans(0)
+      router.refresh()
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
       <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
+
+        {/* Orphan cards banner */}
+        {orphans > 0 && (
+          <div className="mb-4 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-amber-700">
+                <span className="font-semibold">{orphans} card{orphans !== 1 ? 's' : ''}</span> do board antigo não {orphans !== 1 ? 'estão' : 'está'} em nenhuma sprint
+              </p>
+            </div>
+            <button
+              onClick={handleMigrate}
+              disabled={migrating}
+              className="shrink-0 text-xs font-medium bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
+            >
+              {migrating ? 'Recuperando...' : 'Recuperar cards'}
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

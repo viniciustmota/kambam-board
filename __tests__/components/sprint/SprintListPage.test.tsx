@@ -11,6 +11,11 @@ vi.mock('@/app/actions/sprints', () => ({
   createSprintAction: vi.fn(),
 }))
 
+vi.mock('@/app/actions/migration', () => ({
+  migrateOrphanCardsAction: vi.fn(),
+  getOrphanCardCountAction: vi.fn(),
+}))
+
 const sprintsWithMetrics = [
   {
     sprint: {
