@@ -64,6 +64,9 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
   const [csvOpen, setCsvOpen] = useState(false)
   const [tagOpen, setTagOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [sprintName, setSprintName] = useState(sprint.name)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,6 +78,23 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.select()
+  }, [editingName])
+
+  async function handleSaveName() {
+    const trimmed = sprintName.trim()
+    if (!trimmed || trimmed === sprint.name) {
+      setSprintName(sprint.name)
+      setEditingName(false)
+      return
+    }
+    setSaving(true)
+    await updateSprintMetaAction(sprint.id, { name: trimmed })
+    setSaving(false)
+    setEditingName(false)
+  }
 
   async function handleSaveMeta() {
     setSaving(true)
@@ -95,7 +115,28 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-xl font-bold text-gray-900 truncate">{sprint.name}</h1>
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                value={sprintName}
+                onChange={e => setSprintName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveName()
+                  if (e.key === 'Escape') { setSprintName(sprint.name); setEditingName(false) }
+                }}
+                className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-400 outline-none truncate min-w-0"
+                aria-label="Nome da sprint"
+              />
+            ) : (
+              <h1
+                className="text-xl font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => setEditingName(true)}
+                title="Clique para renomear"
+              >
+                {sprintName}
+              </h1>
+            )}
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_COLORS[sprint.status]}`}>
               {STATUS_LABELS[sprint.status]}
             </span>

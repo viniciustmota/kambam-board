@@ -163,7 +163,7 @@ export async function deleteCardInSprintAction(cardId: string) {
 
 export async function updateSprintMetaAction(
   sprintId: string,
-  data: { qualidade?: number; dificuldade?: number; description?: string },
+  data: { qualidade?: number; dificuldade?: number; description?: string; name?: string },
 ) {
   try {
     await verifySession()
