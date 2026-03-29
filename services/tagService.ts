@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma'
 import { TagCreateSchema } from '@/lib/validation/tagSchemas'
 
-export async function createTag(input: { name: string; color?: string; userId: string; boardId: string }) {
+export async function createTag(input: { name: string; color?: string; userId: string }) {
   const parsed = TagCreateSchema.safeParse(input)
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0].message)
@@ -24,6 +24,6 @@ export async function removeTagFromCard(cardId: string, tagId: string) {
   })
 }
 
-export async function getTagsForBoard(boardId: string) {
-  return prisma.tag.findMany({ where: { boardId } })
+export async function getTagsForUser(userId: string) {
+  return prisma.tag.findMany({ where: { userId } })
 }

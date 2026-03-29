@@ -1,11 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { SprintBadge } from './SprintBadge'
 import { SprintManager } from './SprintManager'
-import { migrateOrphanCardsAction } from '@/app/actions/migration'
 import { logoutAction } from '@/app/actions/auth'
 import GlobalSearch from '@/components/search/GlobalSearch'
 import BoardActionMenu from '@/components/board/BoardActionMenu'
@@ -52,8 +50,6 @@ interface Tag {
 
 interface SprintListPageProps {
   sprintsWithMetrics: SprintWithMetrics[]
-  boardId: string
-  orphanCount?: number
   currentUser?: CurrentUser | null
   tags?: Tag[]
 }
@@ -90,20 +86,15 @@ function ProgressBar({ value, total }: { value: number; total: number }) {
 
 export default function SprintListPage({
   sprintsWithMetrics: initial,
-  boardId,
-  orphanCount = 0,
   currentUser,
   tags = [],
 }: SprintListPageProps) {
   const [sprintsWithMetrics, setSprintsWithMetrics] = useState(initial)
   const [showCreate, setShowCreate] = useState(false)
-  const [migrating, setMigrating] = useState(false)
-  const [orphans, setOrphans] = useState(orphanCount)
   const [csvOpen, setCsvOpen] = useState(false)
   const [tagOpen, setTagOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -115,20 +106,12 @@ export default function SprintListPage({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  async function handleMigrate() {
-    setMigrating(true)
-    const result = await migrateOrphanCardsAction(boardId)
-    setMigrating(false)
-    if ('migrated' in result) {
-      setOrphans(0)
-      router.refresh()
-    }
-  }
+  // Pick the first sprint id to use for CSV import (or empty if none)
+  const firstSprintId = sprintsWithMetrics[0]?.sprint.id ?? ''
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
 
-      {/* Top header — mirrors BoardHeader */}
       <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center">
@@ -192,28 +175,6 @@ export default function SprintListPage({
 
       <div className="max-w-3xl mx-auto px-4 py-8 pb-24">
 
-        {/* Orphan cards banner */}
-        {orphans > 0 && (
-          <div className="mb-4 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-amber-700">
-                <span className="font-semibold">{orphans} card{orphans !== 1 ? 's' : ''}</span> do board antigo não {orphans !== 1 ? 'estão' : 'está'} em nenhuma sprint
-              </p>
-            </div>
-            <button
-              onClick={handleMigrate}
-              disabled={migrating}
-              className="shrink-0 text-xs font-medium bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
-            >
-              {migrating ? 'Recuperando...' : 'Recuperar cards'}
-            </button>
-          </div>
-        )}
-
-        {/* Page header row */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Sprints</h1>
@@ -232,11 +193,9 @@ export default function SprintListPage({
           </button>
         </div>
 
-        {/* Create form */}
         {showCreate && (
           <div className="mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <SprintManager
-              boardId={boardId}
               sprints={sprintsWithMetrics.map(i => i.sprint)}
               onSprintCreated={(sprint) => {
                 setSprintsWithMetrics(prev => [...prev, {
@@ -258,7 +217,6 @@ export default function SprintListPage({
           </div>
         )}
 
-        {/* Sprint cards */}
         {sprintsWithMetrics.length === 0 && !showCreate ? (
           <div className="text-center py-20">
             <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +240,6 @@ export default function SprintListPage({
                   href={`/sprints/${sprint.id}`}
                   className="block bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-blue-200 transition-all group"
                 >
-                  {/* Sprint header row */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -302,14 +259,12 @@ export default function SprintListPage({
                     </svg>
                   </div>
 
-                  {/* Progress bar */}
                   {metrics.cardsTotal > 0 && (
                     <div className="mb-3">
                       <ProgressBar value={metrics.cardsConcluidos} total={metrics.cardsTotal} />
                     </div>
                   )}
 
-                  {/* Metrics grid */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                     <div>
                       <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Cards</p>
@@ -331,7 +286,6 @@ export default function SprintListPage({
                     </div>
                   </div>
 
-                  {/* Quality / Difficulty */}
                   {(sprint.qualidade != null || sprint.dificuldade != null) && (
                     <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50">
                       {sprint.qualidade != null && (
@@ -369,15 +323,16 @@ export default function SprintListPage({
         )}
       </div>
 
-      {/* Modals */}
-      <CsvImportModal
-        isOpen={csvOpen}
-        onClose={() => setCsvOpen(false)}
-        boardId={boardId}
-      />
+      {firstSprintId && (
+        <CsvImportModal
+          isOpen={csvOpen}
+          onClose={() => setCsvOpen(false)}
+          sprintId={firstSprintId}
+        />
+      )}
 
       <Modal isOpen={tagOpen} onClose={() => setTagOpen(false)} title="Tags">
-        <TagManager boardId={boardId} tags={tags} />
+        <TagManager tags={tags} />
       </Modal>
     </div>
   )

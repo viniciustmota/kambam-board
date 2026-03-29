@@ -9,9 +9,9 @@ const initialState: BoardState = {
     { id: 'col-2', title: 'Em Andamento', cardIds: ['c3'] },
   ],
   cards: {
-    c1: { id: 'c1', title: 'Card 1', description: '', responsible: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
-    c2: { id: 'c2', title: 'Card 2', description: '', responsible: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
-    c3: { id: 'c3', title: 'Card 3', description: '', responsible: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
+    c1: { id: 'c1', title: 'Card 1', description: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
+    c2: { id: 'c2', title: 'Card 2', description: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
+    c3: { id: 'c3', title: 'Card 3', description: '', color: '#6b7280', createdAt: 0, updatedAt: 0 },
   },
 }
 
@@ -19,7 +19,7 @@ describe('ADD_CARD', () => {
   it('appends new card ID to the target column cardIds', () => {
     const state = kanbanReducer(initialState, {
       type: 'ADD_CARD',
-      payload: { columnId: 'col-1', title: 'New Card', description: '', responsible: '', color: '#6b7280' },
+      payload: { columnId: 'col-1', title: 'New Card', description: '', color: '#6b7280' },
     })
     expect(state.columns[0].cardIds).toHaveLength(3)
   })
@@ -27,10 +27,10 @@ describe('ADD_CARD', () => {
   it('creates card entry in cards map', () => {
     const state = kanbanReducer(initialState, {
       type: 'ADD_CARD',
-      payload: { columnId: 'col-1', title: 'New Card', description: 'Desc', responsible: 'João', color: '#ef4444' },
+      payload: { columnId: 'col-1', title: 'New Card', description: 'Desc', color: '#ef4444' },
     })
     const newId = state.columns[0].cardIds[2]
-    expect(state.cards[newId]).toMatchObject({ title: 'New Card', description: 'Desc', responsible: 'João' })
+    expect(state.cards[newId]).toMatchObject({ title: 'New Card', description: 'Desc' })
   })
 })
 
@@ -104,42 +104,20 @@ describe('REORDER_COLUMNS', () => {
 })
 
 describe('UPDATE_CARD extended', () => {
-  it('updates sprintId when provided', () => {
+  it('updates card title and description', () => {
     const state = kanbanReducer(initialState, {
       type: 'UPDATE_CARD',
-      payload: { cardId: 'c1', title: 'Card 1', description: '', responsible: '', color: '#6b7280', sprintId: 's1' },
+      payload: { cardId: 'c1', title: 'Updated Title', description: 'New desc', color: '#6b7280' },
     })
-    expect(state.cards['c1'].sprintId).toBe('s1')
-  })
-
-  it('clears sprintId when null provided', () => {
-    const stateWithSprint: BoardState = {
-      ...initialState,
-      cards: {
-        ...initialState.cards,
-        c1: { ...initialState.cards['c1'], sprintId: 's1' },
-      },
-    }
-    const state = kanbanReducer(stateWithSprint, {
-      type: 'UPDATE_CARD',
-      payload: { cardId: 'c1', title: 'Card 1', description: '', responsible: '', color: '#6b7280', sprintId: null },
-    })
-    expect(state.cards['c1'].sprintId).toBeNull()
-  })
-
-  it('updates responsibleId when provided', () => {
-    const state = kanbanReducer(initialState, {
-      type: 'UPDATE_CARD',
-      payload: { cardId: 'c1', title: 'Card 1', description: '', responsible: 'Ana', color: '#6b7280', responsibleId: 'u1' },
-    })
-    expect(state.cards['c1'].responsibleId).toBe('u1')
+    expect(state.cards['c1'].title).toBe('Updated Title')
+    expect(state.cards['c1'].description).toBe('New desc')
   })
 
   it('replaces card tags array when tags provided', () => {
     const newTags = [{ tagId: 't2', tag: { id: 't2', name: 'Feature', color: '#3b82f6' } }]
     const state = kanbanReducer(initialState, {
       type: 'UPDATE_CARD',
-      payload: { cardId: 'c1', title: 'Card 1', description: '', responsible: '', color: '#6b7280', tags: newTags },
+      payload: { cardId: 'c1', title: 'Card 1', description: '', color: '#6b7280', tags: newTags },
     })
     expect(state.cards['c1'].tags).toEqual(newTags)
   })

@@ -1,19 +1,21 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface SearchResult {
   id: string
   title: string
   description: string
-  responsible: string
   color: string
-  column: string
+  sprintId: string
   sprint: string | null
+  sprintColumn: string | null
   tags: { name: string; color: string }[]
 }
 
 export default function GlobalSearch() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
@@ -95,16 +97,19 @@ export default function GlobalSearch() {
               className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50 last:border-0"
               role="option"
               aria-selected={false}
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false)
+                setQuery('')
+                router.push(`/sprints/${result.sprintId}?card=${result.id}`)
+              }}
             >
               <div className="flex items-start gap-2">
                 <div className="w-1 h-full rounded-full shrink-0 mt-1" style={{ backgroundColor: result.color, minHeight: '12px' }} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{result.title}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {result.column}
+                    {result.sprintColumn}
                     {result.sprint && <span className="ml-1 text-blue-500">· {result.sprint}</span>}
-                    {result.responsible && <span className="ml-1">· {result.responsible}</span>}
                   </p>
                 </div>
               </div>

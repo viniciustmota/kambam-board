@@ -8,7 +8,7 @@ export class NotFoundError extends Error {
   }
 }
 
-export async function createSprint(input: { name: string; boardId: string; startDate?: Date | string; endDate?: Date | string }) {
+export async function createSprint(input: { name: string; startDate?: Date | string; endDate?: Date | string; createdBy?: string }) {
   const parsed = SprintCreateSchema.safeParse(input)
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0].message)
@@ -35,13 +35,6 @@ export async function deleteSprint(id: string) {
   return prisma.sprint.delete({ where: { id } })
 }
 
-export async function assignCardToSprint(cardId: string, sprintId: string | null) {
-  return prisma.card.update({
-    where: { id: cardId },
-    data: { sprintId },
-  })
-}
-
 export async function completeSprint(id: string) {
   await prisma.sprint.findUnique({ where: { id } })
   return prisma.sprint.update({
@@ -50,6 +43,6 @@ export async function completeSprint(id: string) {
   })
 }
 
-export async function getSprintsForBoard(boardId: string) {
-  return prisma.sprint.findMany({ where: { boardId }, orderBy: { createdAt: 'asc' } })
+export async function getAllSprints() {
+  return prisma.sprint.findMany({ orderBy: { createdAt: 'asc' } })
 }

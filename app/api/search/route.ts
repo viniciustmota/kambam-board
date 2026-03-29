@@ -20,7 +20,6 @@ export async function GET(request: Request) {
       OR: [
         { title: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
-        { responsible: { contains: q, mode: 'insensitive' } },
         { tags: { some: { tag: { name: { contains: q, mode: 'insensitive' } } } } },
         { sprint: { name: { contains: q, mode: 'insensitive' } } },
       ],
@@ -29,26 +28,24 @@ export async function GET(request: Request) {
       id: true,
       title: true,
       description: true,
-      responsible: true,
       color: true,
-      columnId: true,
       sprintId: true,
-      column: { select: { title: true } },
       sprint: { select: { name: true } },
+      sprintColumn: { select: { title: true } },
       tags: { select: { tag: { select: { name: true, color: true } } } },
     },
     take: 20,
     orderBy: { updatedAt: 'desc' },
   })
 
-  const results = cards.slice(0, 20).map(card => ({
+  const results = cards.map(card => ({
     id: card.id,
     title: card.title,
     description: card.description,
-    responsible: card.responsible,
     color: card.color,
-    column: card.column.title,
+    sprintId: card.sprintId,
     sprint: card.sprint?.name ?? null,
+    sprintColumn: card.sprintColumn?.title ?? null,
     tags: card.tags.map(t => t.tag),
   }))
 

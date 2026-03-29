@@ -43,11 +43,11 @@ export default function ColumnList({ state, dispatch, sprints, users, boardTags,
     if (action) dispatch(action)
   }
 
-  const handleAddCard = (columnId: string, data: { title: string; description: string; responsible: string; color: CardColor }) => {
+  const handleAddCard = (columnId: string, data: { title: string; description: string; color: CardColor }) => {
     dispatch({ type: 'ADD_CARD', payload: { columnId, ...data } })
   }
 
-  const handleUpdateCard = (cardId: string, data: { title: string; description: string; responsible: string; color: CardColor; responsibleId?: string | null; sprintId?: string | null }) => {
+  const handleUpdateCard = (cardId: string, data: { title: string; description: string; color: CardColor }) => {
     dispatch({ type: 'UPDATE_CARD', payload: { cardId, ...data } })
   }
 
@@ -92,10 +92,8 @@ export default function ColumnList({ state, dispatch, sprints, users, boardTags,
                   onAddCard={handleAddCard}
                   onUpdateCard={handleUpdateCard}
                   onDeleteCard={handleDeleteCard}
-                  sprints={sprints}
                   users={users}
                   boardTags={boardTags}
-                  boardId={boardId}
                 />
               )
             })}

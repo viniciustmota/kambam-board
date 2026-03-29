@@ -7,10 +7,12 @@ export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ sprintId: string }>
+  searchParams: Promise<{ card?: string }>
 }
 
-export default async function SprintPage({ params }: Props) {
+export default async function SprintPage({ params, searchParams }: Props) {
   const { sprintId } = await params
+  const { card: initialCardId } = await searchParams
   const [result, currentUser] = await Promise.all([
     getSprintBoardAction(sprintId),
     getCurrentUserAction(),
@@ -32,10 +34,10 @@ export default async function SprintPage({ params }: Props) {
         status: result.sprint.status as 'PLANNED' | 'ACTIVE' | 'COMPLETED',
       }}
       columns={result.columns}
-      boardId={result.sprint.boardId}
       users={result.users}
       tags={result.tags}
       currentUser={currentUser}
+      initialCardId={initialCardId}
     />
   )
 }

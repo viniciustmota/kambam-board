@@ -14,12 +14,11 @@ interface Sprint {
 }
 
 interface SprintManagerProps {
-  boardId: string
   sprints: Sprint[]
   onSprintCreated?: (sprint: Sprint) => void
 }
 
-export function SprintManager({ boardId, sprints: initialSprints, onSprintCreated }: SprintManagerProps) {
+export function SprintManager({ sprints: initialSprints, onSprintCreated }: SprintManagerProps) {
   const [sprints, setSprints] = useState(initialSprints)
   const [newName, setNewName] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -39,7 +38,6 @@ export function SprintManager({ boardId, sprints: initialSprints, onSprintCreate
     startTransition(async () => {
       const result = await createSprintAction(undefined, {
         name: newName.trim(),
-        boardId,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       })

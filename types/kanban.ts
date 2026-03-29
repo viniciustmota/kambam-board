@@ -39,8 +39,6 @@ export interface Card {
   id: string
   title: string
   description: string
-  responsible: string
-  responsibleId?: string | null
   color: CardColor
   sprintId?: string | null
   tags?: CardTag[]

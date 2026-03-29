@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd'
 import SprintHeader from './SprintHeader'
 import ColumnComponent from '@/components/board/Column'
+import CardModal from '@/components/card/CardModal'
 import { Column as ColumnType, Card as CardType, CardColor } from '@/types/kanban'
 import {
   moveCardInSprintAction,
@@ -20,8 +22,6 @@ interface SprintCard {
   id: string
   title: string
   description: string
-  responsible: string
-  responsibleId?: string | null
   color: string
   sprintPosition?: number | null
   tags?: { tagId: string; tag: { id?: string; name: string; color: string } }[]
@@ -50,10 +50,10 @@ interface Sprint {
 interface SprintBoardProps {
   sprint: Sprint
   columns: SprintColumnData[]
-  boardId: string
   users?: { id: string; name: string; email: string; avatarUrl?: string | null }[]
   tags?: { id: string; name: string; color: string }[]
   currentUser?: { id: string; name: string; email: string; avatarUrl?: string | null } | null
+  initialCardId?: string | null
 }
 
 function toColumnType(col: SprintColumnData): ColumnType {
@@ -65,8 +65,6 @@ function toCardType(card: SprintCard, sprintId: string): CardType {
     id: card.id,
     title: card.title,
     description: card.description ?? '',
-    responsible: card.responsible ?? '',
-    responsibleId: card.responsibleId ?? null,
     color: (card.color ?? '#6b7280') as CardColor,
     sprintId,
     tags: card.tags?.map(ct => ({
@@ -79,10 +77,26 @@ function toCardType(card: SprintCard, sprintId: string): CardType {
   }
 }
 
-export default function SprintBoard({ sprint, columns: initialColumns, boardId, users, tags, currentUser }: SprintBoardProps) {
+export default function SprintBoard({ sprint, columns: initialColumns, users, tags, currentUser, initialCardId }: SprintBoardProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const [columns, setColumns] = useState(initialColumns)
   const [newColTitle, setNewColTitle] = useState('')
   const [addingCol, setAddingCol] = useState(false)
+  const [openCardId, setOpenCardId] = useState<string | null>(initialCardId ?? null)
+
+  useEffect(() => {
+    const cardParam = searchParams.get('card')
+    if (cardParam) {
+      setOpenCardId(cardParam)
+      // Remove ?card= from URL without reload
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('card')
+      const newUrl = params.toString() ? `${pathname}?${params}` : pathname
+      router.replace(newUrl, { scroll: false })
+    }
+  }, [searchParams, pathname, router])
 
   async function handleDragEnd(result: DropResult) {
     const { destination, source, draggableId, type } = result
@@ -98,7 +112,6 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
       return
     }
 
-    // type === 'CARD'
     const newColumns = columns.map(col => ({ ...col, cards: [...col.cards] }))
     const srcCol = newColumns.find(c => c.id === source.droppableId)
     const dstCol = newColumns.find(c => c.id === destination.droppableId)
@@ -131,7 +144,7 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
     await deleteSprintColumnAction(columnId)
   }
 
-  async function handleAddCard(columnId: string, data: { title: string; description: string; responsible: string; color: CardColor }) {
+  async function handleAddCard(columnId: string, data: { title: string; description: string; color: CardColor }) {
     const result = await createCardInSprintAction({
       sprintId: sprint.id,
       sprintColumnId: columnId,
@@ -144,7 +157,6 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
         id: result.card.id,
         title: result.card.title,
         description: result.card.description,
-        responsible: result.card.responsible,
         color: result.card.color,
         tags: [],
         attachments: [],
@@ -158,7 +170,7 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
 
   async function handleUpdateCard(
     cardId: string,
-    data: { title: string; description: string; responsible: string; color: CardColor; responsibleId?: string | null; sprintId?: string | null },
+    data: { title: string; description: string; color: CardColor },
   ) {
     setColumns(cols => cols.map(col => ({
       ...col,
@@ -167,9 +179,7 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
     await updateCardInSprintAction(cardId, {
       title: data.title,
       description: data.description,
-      responsible: data.responsible,
       color: data.color,
-      responsibleId: data.responsibleId,
     })
   }
 
@@ -183,7 +193,7 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex flex-col pb-16">
-      <SprintHeader sprint={sprint} boardId={boardId} currentUser={currentUser} tags={tags} />
+      <SprintHeader sprint={sprint} currentUser={currentUser} tags={tags} />
       <div className="flex-1 overflow-x-auto p-4">
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="sprint-columns" direction="horizontal" type="COLUMN">
@@ -206,13 +216,10 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
                     onDeleteCard={(cardId) => handleDeleteCard(cardId)}
                     users={users}
                     boardTags={tags}
-                    boardId={boardId}
-                    sprints={[]}
                   />
                 ))}
                 {provided.placeholder}
 
-                {/* Add column */}
                 <div className="w-72 shrink-0">
                   {addingCol ? (
                     <div className="bg-white/80 rounded-xl p-3 space-y-2">
@@ -260,6 +267,23 @@ export default function SprintBoard({ sprint, columns: initialColumns, boardId, 
           </Droppable>
         </DragDropContext>
       </div>
+
+      {(() => {
+        if (!openCardId) return null
+        const openCard = columns.flatMap(c => c.cards).find(c => c.id === openCardId)
+        if (!openCard) return null
+        return (
+          <CardModal
+            isOpen
+            onClose={() => setOpenCardId(null)}
+            onSubmit={data => handleUpdateCard(openCardId, data)}
+            initialCard={toCardType(openCard, sprint.id)}
+            users={users}
+            boardTags={tags}
+            attachments={[]}
+          />
+        )
+      })()}
     </div>
   )
 }

@@ -15,15 +15,16 @@ export async function getSprintMetrics(sprintId: string) {
     }),
     prisma.card.findMany({
       where: { sprintId },
-      include: { column: { select: { title: true } } },
+      include: { sprintColumn: { select: { title: true } } },
     }),
   ])
 
   const horasTotais = timeEntries.reduce((sum, e) => sum + e.duration / 3600, 0)
   const custoTotal = timeEntries.reduce((sum, e) => sum + (e.duration / 3600) * e.user.valorHora, 0)
   const now = new Date()
-  const cardsAtrasados = cards.filter(c => c.endDate && c.endDate < now && !c.column.title.toLowerCase().includes('conclu')).length
-  const cardsConcluidos = cards.filter(c => c.column.title.toLowerCase().includes('conclu')).length
+  const isDone = (c: typeof cards[number]) => /conclu/i.test(c.sprintColumn?.title ?? '')
+  const cardsConcluidos = cards.filter(isDone).length
+  const cardsAtrasados = cards.filter(c => c.endDate && c.endDate < now && !isDone(c)).length
 
   return {
     horasTotais,
@@ -34,9 +35,9 @@ export async function getSprintMetrics(sprintId: string) {
   }
 }
 
-export async function getUserMetrics(boardId: string) {
+export async function getUserMetrics() {
   const users = await prisma.user.findMany({
-    where: { timeEntries: { some: { card: { column: { boardId } } } } },
+    where: { timeEntries: { some: {} } },
     select: {
       id: true,
       name: true,
@@ -44,7 +45,6 @@ export async function getUserMetrics(boardId: string) {
       avatarUrl: true,
       valorHora: true,
       timeEntries: {
-        where: { card: { column: { boardId } } },
         select: { duration: true },
       },
     },
@@ -64,12 +64,73 @@ export async function getUserMetrics(boardId: string) {
   })
 }
 
-export async function getGlobalKPIs(boardId: string) {
+export async function getMemberCardMetrics() {
+  const now = new Date()
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      cargo: true,
+      avatarUrl: true,
+      valorHora: true,
+      timeEntries: { select: { duration: true } },
+      responsibleCards: {
+        select: {
+          card: {
+            select: {
+              id: true,
+              endDate: true,
+              sprintColumn: { select: { title: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { name: 'asc' },
+  })
+
+  return users.map(u => {
+    const cards = u.responsibleCards.map(r => r.card)
+    const isDone = (c: typeof cards[number]) => /conclu/i.test(c.sprintColumn?.title ?? '')
+    const horasTotais = u.timeEntries.reduce((sum, e) => sum + e.duration / 3600, 0)
+    return {
+      id: u.id,
+      name: u.name,
+      cargo: u.cargo,
+      avatarUrl: u.avatarUrl,
+      horasTotais,
+      custoTotal: horasTotais * u.valorHora,
+      cardsTotal: cards.length,
+      cardsConcluidos: cards.filter(isDone).length,
+      cardsAtrasados: cards.filter(c => c.endDate && c.endDate < now && !isDone(c)).length,
+    }
+  })
+}
+
+export async function getOverdueCards() {
+  const now = new Date()
+  const cards = await prisma.card.findMany({
+    where: { endDate: { lt: now } },
+    include: {
+      sprint: { select: { id: true, name: true } },
+      sprintColumn: { select: { title: true } },
+      responsibles: {
+        include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+      },
+    },
+    orderBy: { endDate: 'asc' },
+    take: 50,
+  })
+
+  const isDone = (title?: string | null) => /conclu/i.test(title ?? '')
+  return cards.filter(c => !isDone(c.sprintColumn?.title))
+}
+
+export async function getGlobalKPIs() {
   const [sprints, cards, timeEntries, users] = await Promise.all([
-    prisma.sprint.findMany({ where: { boardId } }),
-    prisma.card.findMany({ where: { column: { boardId } } }),
+    prisma.sprint.findMany(),
+    prisma.card.findMany(),
     prisma.timeEntry.findMany({
-      where: { card: { column: { boardId } } },
       include: { user: { select: { valorHora: true } } },
     }),
     prisma.user.findMany({ select: { id: true, valorHora: true } }),
@@ -87,11 +148,8 @@ export async function getGlobalKPIs(boardId: string) {
   }
 }
 
-export async function getSprintsWithMetrics(boardId: string) {
-  const sprints = await prisma.sprint.findMany({
-    where: { boardId },
-    orderBy: { createdAt: 'asc' },
-  })
+export async function getSprintsWithMetrics() {
+  const sprints = await prisma.sprint.findMany({ orderBy: { createdAt: 'asc' } })
   const metricsArray = await Promise.all(sprints.map(s => getSprintMetrics(s.id)))
   return sprints.map((sprint, i) => ({ sprint, metrics: metricsArray[i] }))
 }

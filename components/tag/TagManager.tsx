@@ -11,13 +11,12 @@ interface Tag {
 }
 
 interface TagManagerProps {
-  boardId: string
   tags: Tag[]
 }
 
 const PRESET_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280']
 
-export function TagManager({ boardId, tags: initialTags }: TagManagerProps) {
+export function TagManager({ tags: initialTags }: TagManagerProps) {
   const [tags, setTags] = useState(initialTags)
   const [newName, setNewName] = useState('')
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0])
@@ -26,7 +25,7 @@ export function TagManager({ boardId, tags: initialTags }: TagManagerProps) {
   function handleCreate() {
     if (!newName.trim()) return
     startTransition(async () => {
-      const result = await createTagAction({ name: newName.trim(), color: selectedColor, boardId })
+      const result = await createTagAction({ name: newName.trim(), color: selectedColor })
       if (result?.tag) {
         setTags((prev) => [...prev, result.tag as Tag])
         setNewName('')

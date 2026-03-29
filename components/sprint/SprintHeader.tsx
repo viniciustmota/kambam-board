@@ -35,7 +35,6 @@ interface SprintHeaderProps {
     qualidade?: number | null
     dificuldade?: number | null
   }
-  boardId?: string
   currentUser?: CurrentUser | null
   tags?: Tag[]
 }
@@ -57,9 +56,7 @@ function formatDate(d: Date | string | null) {
   return new Date(d).toLocaleDateString('pt-BR')
 }
 
-export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }: SprintHeaderProps) {
-  const [qualidade, setQualidade] = useState(sprint.qualidade?.toString() ?? '')
-  const [dificuldade, setDificuldade] = useState(sprint.dificuldade?.toString() ?? '')
+export default function SprintHeader({ sprint, currentUser, tags = [] }: SprintHeaderProps) {
   const [saving, setSaving] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
   const [tagOpen, setTagOpen] = useState(false)
@@ -96,19 +93,10 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
     setEditingName(false)
   }
 
-  async function handleSaveMeta() {
-    setSaving(true)
-    await updateSprintMetaAction(sprint.id, {
-      qualidade: qualidade ? Number(qualidade) : undefined,
-      dificuldade: dificuldade ? Number(dificuldade) : undefined,
-    })
-    setSaving(false)
-  }
-
   return (
     <>
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
-        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-50">
+        <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/sprints" className="text-gray-400 hover:text-gray-600 transition-colors shrink-0" aria-label="Voltar às sprints">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,6 +139,7 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
             >
               Ver Dashboard
             </Link>
+            {saving && <span className="text-xs text-gray-400 shrink-0">Salvando...</span>}
           </div>
 
           <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -192,26 +181,12 @@ export default function SprintHeader({ sprint, boardId, currentUser, tags = [] }
             />
           </div>
         </div>
-
-        <div className="flex items-center gap-6 px-6 py-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 font-medium">Qualidade (0–10):</label>
-            <input type="number" min="0" max="10" step="0.1" value={qualidade} onChange={e => setQualidade(e.target.value)} onBlur={handleSaveMeta} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center text-gray-900 placeholder:text-gray-400" placeholder="—" aria-label="Qualidade da sprint" />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 font-medium">Dificuldade (0–10):</label>
-            <input type="number" min="0" max="10" step="0.1" value={dificuldade} onChange={e => setDificuldade(e.target.value)} onBlur={handleSaveMeta} className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center text-gray-900 placeholder:text-gray-400" placeholder="—" aria-label="Dificuldade da sprint" />
-          </div>
-          {saving && <span className="text-xs text-gray-400">Salvando...</span>}
-        </div>
       </header>
 
-      {boardId && (
-        <CsvImportModal isOpen={csvOpen} onClose={() => setCsvOpen(false)} boardId={boardId} />
-      )}
+      <CsvImportModal isOpen={csvOpen} onClose={() => setCsvOpen(false)} sprintId={sprint.id} />
 
       <Modal isOpen={tagOpen} onClose={() => setTagOpen(false)} title="Tags">
-        <TagManager boardId={boardId ?? ''} tags={tags} />
+        <TagManager tags={tags} />
       </Modal>
     </>
   )

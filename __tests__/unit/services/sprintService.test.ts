@@ -17,7 +17,7 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 import prisma from '@/lib/prisma'
-import { createSprint, updateSprint, assignCardToSprint, completeSprint } from '@/services/sprintService'
+import { createSprint, updateSprint, completeSprint } from '@/services/sprintService'
 
 const mockPrisma = prisma as {
   sprint: {
@@ -38,19 +38,18 @@ beforeEach(() => {
 
 describe('createSprint', () => {
   it('throws ValidationError on invalid schema (empty name)', async () => {
-    await expect(createSprint({ name: '', boardId: 'b1' })).rejects.toThrow()
+    await expect(createSprint({ name: '' })).rejects.toThrow()
   })
 
   it('creates sprint record and returns it', async () => {
     mockPrisma.sprint.create.mockResolvedValue({
       id: 's1',
       name: 'Sprint 1',
-      boardId: 'b1',
       status: 'PLANNED',
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    const sprint = await createSprint({ name: 'Sprint 1', boardId: 'b1' })
+    const sprint = await createSprint({ name: 'Sprint 1' })
     expect(mockPrisma.sprint.create).toHaveBeenCalledOnce()
     expect(sprint.name).toBe('Sprint 1')
   })
@@ -67,26 +66,6 @@ describe('updateSprint', () => {
     mockPrisma.sprint.update.mockResolvedValue({ id: 's1', name: 'Sprint Updated', status: 'ACTIVE' })
     const result = await updateSprint('s1', { name: 'Sprint Updated', status: 'ACTIVE' })
     expect(result.name).toBe('Sprint Updated')
-  })
-})
-
-describe('assignCardToSprint', () => {
-  it('updates card sprintId', async () => {
-    mockPrisma.card.update.mockResolvedValue({ id: 'c1', sprintId: 's1' })
-    await assignCardToSprint('c1', 's1')
-    expect(mockPrisma.card.update).toHaveBeenCalledWith({
-      where: { id: 'c1' },
-      data: { sprintId: 's1' },
-    })
-  })
-
-  it('sets sprintId to null to remove from sprint', async () => {
-    mockPrisma.card.update.mockResolvedValue({ id: 'c1', sprintId: null })
-    await assignCardToSprint('c1', null)
-    expect(mockPrisma.card.update).toHaveBeenCalledWith({
-      where: { id: 'c1' },
-      data: { sprintId: null },
-    })
   })
 })
 

@@ -1,15 +1,15 @@
 'use server'
 
 import { verifySession } from '@/lib/dal'
-import { createSprint, updateSprint, deleteSprint, assignCardToSprint, completeSprint, getSprintsForBoard } from '@/services/sprintService'
+import { createSprint, updateSprint, deleteSprint, completeSprint, getAllSprints } from '@/services/sprintService'
 
 export async function createSprintAction(
   _prevState: unknown,
-  input: { name: string; boardId: string; startDate?: string; endDate?: string },
+  input: { name: string; startDate?: string; endDate?: string },
 ) {
   try {
     const { userId } = await verifySession()
-    const sprint = await createSprint({ ...input, createdBy: userId } as Parameters<typeof createSprint>[0])
+    const sprint = await createSprint({ ...input, createdBy: userId })
     return { sprint }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Erro ao criar sprint' }
@@ -36,16 +36,6 @@ export async function deleteSprintAction(id: string) {
   }
 }
 
-export async function assignCardToSprintAction(cardId: string, sprintId: string | null) {
-  try {
-    await verifySession()
-    await assignCardToSprint(cardId, sprintId)
-    return { success: true }
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Erro ao associar card ao sprint' }
-  }
-}
-
 export async function completeSprintAction(id: string) {
   try {
     await verifySession()
@@ -56,7 +46,11 @@ export async function completeSprintAction(id: string) {
   }
 }
 
-export async function getSprintsForBoardAction(boardId: string) {
-  await verifySession()
-  return getSprintsForBoard(boardId)
+export async function getSprintsAction() {
+  try {
+    await verifySession()
+    return await getAllSprints()
+  } catch {
+    return []
+  }
 }

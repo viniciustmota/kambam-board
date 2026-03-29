@@ -2,7 +2,6 @@
 
 import { verifySession } from '@/lib/dal'
 import prisma from '@/lib/prisma'
-import { randomUUID } from 'crypto'
 import {
   getSprintColumns,
   createSprintColumn,
@@ -15,7 +14,7 @@ import {
 
 export async function getSprintBoardAction(sprintId: string) {
   try {
-    await verifySession()
+    const { userId } = await verifySession()
     const sprint = await prisma.sprint.findUnique({ where: { id: sprintId } })
     if (!sprint) return { error: 'Sprint não encontrado' }
 
@@ -27,7 +26,7 @@ export async function getSprintBoardAction(sprintId: string) {
 
     const [users, tags] = await Promise.all([
       prisma.user.findMany({ select: { id: true, name: true, email: true, avatarUrl: true } }),
-      prisma.tag.findMany({ where: { boardId: sprint.boardId } }),
+      prisma.tag.findMany({ where: { userId } }),
     ])
 
     return { sprint, columns, users, tags }
@@ -68,29 +67,16 @@ export async function createCardInSprintAction(input: {
   try {
     await verifySession()
 
-    // Find first available board column (fallback for required columnId)
-    const sprint = await prisma.sprint.findUnique({ where: { id: input.sprintId } })
-    if (!sprint) return { error: 'Sprint não encontrado' }
-
-    const firstColumn = await prisma.column.findFirst({
-      where: { boardId: sprint.boardId },
-      orderBy: { position: 'asc' },
-    })
-    if (!firstColumn) return { error: 'Nenhuma coluna encontrada no board' }
-
     const existingCards = await prisma.card.count({
       where: { sprintColumnId: input.sprintColumnId },
     })
 
     const card = await prisma.card.create({
       data: {
-        id: randomUUID(),
         title: input.title,
         description: input.description ?? '',
-        responsible: '',
         color: input.color ?? '#3b82f6',
-        position: 0,
-        columnId: firstColumn.id,
+        position: existingCards,
         sprintId: input.sprintId,
         sprintColumnId: input.sprintColumnId,
         sprintPosition: existingCards,
@@ -137,9 +123,7 @@ export async function updateCardInSprintAction(
   data: {
     title: string
     description: string
-    responsible: string
     color: string
-    responsibleId?: string | null
   },
 ) {
   try {

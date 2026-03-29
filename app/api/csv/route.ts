@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { decrypt } from '@/lib/session'
 import { importCsvRows } from '@/services/csvImportService'
 import prisma from '@/lib/prisma'
@@ -6,7 +5,6 @@ import prisma from '@/lib/prisma'
 const ALLOWED_CSV_TYPES = ['text/csv', 'text/plain']
 
 export async function POST(request: Request) {
-  // Auth check
   const cookieHeader = request.headers.get('cookie') ?? ''
   const sessionToken = cookieHeader.match(/session=([^;]+)/)?.[1]
   const session = await decrypt(sessionToken)
@@ -15,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData()
-  const boardId = formData.get('boardId') as string | null
+  const sprintId = formData.get('sprintId') as string | null
   const file = formData.get('file') as File | null
 
   if (!file) {
@@ -26,20 +24,27 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Tipo de arquivo inválido. Use um arquivo .csv' }, { status: 400 })
   }
 
-  // Load board columns and sprints
-  const board = await prisma.board.findFirst({ where: boardId ? { id: boardId } : undefined })
-  const columns = await prisma.column.findMany({
-    where: { boardId: board?.id },
+  if (!sprintId) {
+    return Response.json({ error: 'sprintId é obrigatório' }, { status: 400 })
+  }
+
+  const sprint = await prisma.sprint.findUnique({ where: { id: sprintId } })
+  if (!sprint) {
+    return Response.json({ error: 'Sprint não encontrado' }, { status: 404 })
+  }
+
+  const sprintColumns = await prisma.sprintColumn.findMany({
+    where: { sprintId },
     select: { id: true, title: true },
     orderBy: { position: 'asc' },
   })
-  const sprints = await prisma.sprint.findMany({
-    where: { boardId: board?.id },
-    select: { id: true, name: true },
-  })
+
+  if (sprintColumns.length === 0) {
+    return Response.json({ error: 'Sprint não tem colunas. Abra a sprint antes de importar.' }, { status: 400 })
+  }
 
   const csvText = await file.text()
-  const result = await importCsvRows(csvText, columns, sprints)
+  const result = await importCsvRows(csvText, sprintId, sprintColumns)
 
   return Response.json(result, { status: 200 })
 }

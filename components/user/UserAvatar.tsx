@@ -2,7 +2,7 @@
 
 interface UserAvatarProps {
   name?: string
-  size?: 'sm' | 'md'
+  size?: 'xs' | 'sm' | 'md'
   avatarUrl?: string | null
 }
 
@@ -14,7 +14,7 @@ function getInitials(name?: string): string {
 }
 
 export default function UserAvatar({ name, size = 'md', avatarUrl }: UserAvatarProps) {
-  const sizeClass = size === 'sm' ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'
+  const sizeClass = size === 'xs' ? 'w-5 h-5 text-xs' : size === 'sm' ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'
   if (avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element

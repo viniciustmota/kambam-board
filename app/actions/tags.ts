@@ -1,9 +1,9 @@
 'use server'
 
 import { verifySession } from '@/lib/dal'
-import { createTag, deleteTag, assignTagToCard, removeTagFromCard, getTagsForBoard } from '@/services/tagService'
+import { createTag, deleteTag, assignTagToCard, removeTagFromCard, getTagsForUser } from '@/services/tagService'
 
-export async function createTagAction(input: { name: string; color?: string; boardId: string }) {
+export async function createTagAction(input: { name: string; color?: string }) {
   try {
     const { userId } = await verifySession()
     const tag = await createTag({ ...input, userId })
@@ -43,10 +43,10 @@ export async function removeTagFromCardAction(cardId: string, tagId: string) {
   }
 }
 
-export async function getTagsForBoardAction(boardId: string) {
+export async function getTagsForUserAction() {
   try {
-    await verifySession()
-    const tags = await getTagsForBoard(boardId)
+    const { userId } = await verifySession()
+    const tags = await getTagsForUser(userId)
     return { tags }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Erro ao buscar tags' }

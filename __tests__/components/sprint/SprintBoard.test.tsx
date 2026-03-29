@@ -45,8 +45,9 @@ vi.mock('@/app/actions/cardResponsible', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn().mockReturnValue({ push: vi.fn() }),
+  useRouter: vi.fn().mockReturnValue({ push: vi.fn(), replace: vi.fn() }),
   usePathname: vi.fn().mockReturnValue('/sprints/s1'),
+  useSearchParams: vi.fn().mockReturnValue(new URLSearchParams()),
 }))
 
 const sprint = {
@@ -76,8 +77,6 @@ const columns = [
         id: 'c1',
         title: 'Task 1',
         description: 'Descrição da task',
-        responsible: 'Ana Lima',
-        responsibleId: 'u1',
         color: '#3b82f6',
         tags: [{ tagId: 't1', tag: { id: 't1', name: 'Bug', color: '#ef4444' } }],
         attachments: [],
@@ -95,72 +94,67 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('SprintBoard', () => {
   it('renders sprint name in header', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByText('Sprint 1')).toBeInTheDocument()
   })
 
   it('renders all columns', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByText('A Fazer')).toBeInTheDocument()
     expect(screen.getByText('Concluído')).toBeInTheDocument()
   })
 
   it('renders cards in columns', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByText('Task 1')).toBeInTheDocument()
   })
 
   it('renders add column button', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByText(/nova coluna/i)).toBeInTheDocument()
   })
 
   it('renders status badge', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByText('Ativa')).toBeInTheDocument()
   })
 
   it('renders delete column button for each column', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByRole('button', { name: /excluir coluna a fazer/i })).toBeInTheDocument()
   })
 
   it('renders card with tags', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} users={users} tags={tags} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} users={users} tags={tags} />)
     expect(screen.getByText('Bug')).toBeInTheDocument()
   })
 
-  it('renders card with responsible name', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} users={users} boardId="b1" />)
-    expect(screen.getByText('Ana Lima')).toBeInTheDocument()
-  })
-
   it('column header has inline editable title', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     const titles = screen.getAllByText('A Fazer')
     expect(titles.length).toBeGreaterThanOrEqual(1)
   })
 
   // Header parity with SprintListPage
   it('renders global search input', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByRole('searchbox', { name: /busca global/i })).toBeInTheDocument()
   })
 
   it('renders board action menu button', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     expect(screen.getByRole('button', { name: /board actions/i })).toBeInTheDocument()
   })
 
   it('renders user avatar and name when currentUser is passed', () => {
     const currentUser = { id: 'u1', name: 'Ana Lima', email: 'ana@example.com', avatarUrl: null }
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" currentUser={currentUser} />)
+    render(<SprintBoard sprint={sprint} columns={columns} currentUser={currentUser} />)
     expect(screen.getByRole('button', { name: /menu do usuário/i })).toBeInTheDocument()
     expect(screen.getAllByText('Ana Lima').length).toBeGreaterThanOrEqual(1)
   })
 
   it('opens CSV import modal via action menu', () => {
-    render(<SprintBoard sprint={sprint} columns={columns} boardId="b1" />)
+    render(<SprintBoard sprint={sprint} columns={columns} />)
     fireEvent.click(screen.getByRole('button', { name: /board actions/i }))
     fireEvent.click(screen.getByText(/importar csv/i))
     expect(screen.getAllByText(/importar csv/i).length).toBeGreaterThanOrEqual(1)

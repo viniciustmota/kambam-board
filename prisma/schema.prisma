@@ -21,32 +21,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  cards            Card[]            @relation("CardResponsible")
   tags             Tag[]
   sprints          Sprint[]
   timeEntries      TimeEntry[]
   responsibleCards CardResponsible[]
-}
-
-model Board {
-  id        String   @id @default(cuid())
-  name      String   @default("Meu Projeto")
-  columns   Column[]
-  sprints   Sprint[]
-  tags      Tag[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Column {
-  id        String   @id
-  title     String
-  position  Int
-  boardId   String
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  cards     Card[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 enum SprintStatus {
@@ -59,8 +37,6 @@ model Sprint {
   id            String         @id @default(cuid())
   name          String
   description   String?
-  boardId       String
-  board         Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
   status        SprintStatus   @default(PLANNED)
   startDate     DateTime?
   endDate       DateTime?
@@ -91,11 +67,9 @@ model Tag {
   color   String    @default("#6b7280")
   userId  String
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  boardId String
-  board   Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
   cards   CardTag[]
 
-  @@unique([name, userId, boardId])
+  @@unique([name, userId])
 }
 
 model CardTag {
@@ -117,26 +91,21 @@ model CardResponsible {
 }
 
 model Card {
-  id              String        @id
-  title           String
-  description     String        @default("")
-  responsible     String        @default("")
-  responsibleId   String?
-  responsibleUser User?         @relation("CardResponsible", fields: [responsibleId], references: [id], onDelete: SetNull)
-  color           String        @default("#6b7280")
-  position        Int
-  columnId        String
-  column          Column        @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  sprintId        String?
-  sprint          Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  sprintColumnId  String?
-  sprintColumn    SprintColumn? @relation("SprintColumnCards", fields: [sprintColumnId], references: [id], onDelete: SetNull)
-  sprintPosition  Int?
-  tagsImport      String        @default("")
-  startDate       DateTime?
-  endDate         DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @default("")
+  color          String        @default("#6b7280")
+  position       Int           @default(0)
+  sprintId       String
+  sprint         Sprint        @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  sprintColumnId String?
+  sprintColumn   SprintColumn? @relation("SprintColumnCards", fields: [sprintColumnId], references: [id], onDelete: SetNull)
+  sprintPosition Int?
+  tagsImport     String        @default("")
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   tags         CardTag[]
   attachments  Attachment[]

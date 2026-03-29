@@ -6,9 +6,8 @@ vi.mock('@/services/csvImportService', () => ({
 }))
 vi.mock('@/lib/prisma', () => ({
   default: {
-    board: { findFirst: vi.fn() },
-    column: { findMany: vi.fn() },
-    sprint: { findMany: vi.fn() },
+    sprintColumn: { findMany: vi.fn() },
+    sprint: { findUnique: vi.fn() },
   },
 }))
 vi.mock('@/lib/session', () => ({
@@ -23,10 +22,11 @@ import prisma from '@/lib/prisma'
 const mockImport = importCsvRows as ReturnType<typeof vi.fn>
 const mockDecrypt = decrypt as ReturnType<typeof vi.fn>
 const mockPrisma = prisma as {
-  board: { findFirst: ReturnType<typeof vi.fn> }
-  column: { findMany: ReturnType<typeof vi.fn> }
-  sprint: { findMany: ReturnType<typeof vi.fn> }
+  sprintColumn: { findMany: ReturnType<typeof vi.fn> }
+  sprint: { findUnique: ReturnType<typeof vi.fn> }
 }
+
+const MOCK_SPRINT = { id: 's1', name: 'Sprint 1' }
 
 function makeRequest(body: FormData, sessionToken?: string): Request {
   const headers: Record<string, string> = {}
@@ -53,7 +53,7 @@ describe('POST /api/csv', () => {
   it('returns 400 when no file is attached', async () => {
     mockDecrypt.mockResolvedValue({ userId: 'u1', role: 'member' })
     const form = new FormData()
-    form.set('boardId', 'b1')
+    form.set('sprintId', 's1')
     const res = await POST(makeRequest(form, 'valid-token'))
     expect(res.status).toBe(400)
   })
@@ -61,7 +61,7 @@ describe('POST /api/csv', () => {
   it('returns 400 when file MIME type is not csv/plain', async () => {
     mockDecrypt.mockResolvedValue({ userId: 'u1', role: 'member' })
     const form = new FormData()
-    form.set('boardId', 'b1')
+    form.set('sprintId', 's1')
     form.set('file', new File(['data'], 'data.json', { type: 'application/json' }))
     const res = await POST(makeRequest(form, 'valid-token'))
     expect(res.status).toBe(400)
@@ -69,14 +69,13 @@ describe('POST /api/csv', () => {
 
   it('returns 200 with imported count for valid CSV', async () => {
     mockDecrypt.mockResolvedValue({ userId: 'u1', role: 'member' })
-    mockPrisma.board.findFirst.mockResolvedValue({ id: 'b1' })
-    mockPrisma.column.findMany.mockResolvedValue([{ id: 'col1', title: 'A Fazer' }])
-    mockPrisma.sprint.findMany.mockResolvedValue([])
+    mockPrisma.sprint.findUnique.mockResolvedValue(MOCK_SPRINT)
+    mockPrisma.sprintColumn.findMany.mockResolvedValue([{ id: 'col1', title: 'A Fazer' }])
     mockImport.mockResolvedValue({ imported: 2, errors: [] })
 
     const csv = 'title,status\nTask 1,A Fazer\nTask 2,A Fazer'
     const form = new FormData()
-    form.set('boardId', 'b1')
+    form.set('sprintId', 's1')
     form.set('file', new File([csv], 'tasks.csv', { type: 'text/csv' }))
     const res = await POST(makeRequest(form, 'valid-token'))
     expect(res.status).toBe(200)
@@ -87,14 +86,13 @@ describe('POST /api/csv', () => {
 
   it('returns 200 with errors array for partially invalid CSV', async () => {
     mockDecrypt.mockResolvedValue({ userId: 'u1', role: 'member' })
-    mockPrisma.board.findFirst.mockResolvedValue({ id: 'b1' })
-    mockPrisma.column.findMany.mockResolvedValue([{ id: 'col1', title: 'A Fazer' }])
-    mockPrisma.sprint.findMany.mockResolvedValue([])
+    mockPrisma.sprint.findUnique.mockResolvedValue(MOCK_SPRINT)
+    mockPrisma.sprintColumn.findMany.mockResolvedValue([{ id: 'col1', title: 'A Fazer' }])
     mockImport.mockResolvedValue({ imported: 1, errors: [{ row: 2, message: 'Título é obrigatório' }] })
 
     const csv = 'title,status\nTask 1,A Fazer\n,A Fazer'
     const form = new FormData()
-    form.set('boardId', 'b1')
+    form.set('sprintId', 's1')
     form.set('file', new File([csv], 'tasks.csv', { type: 'text/csv' }))
     const res = await POST(makeRequest(form, 'valid-token'))
     expect(res.status).toBe(200)

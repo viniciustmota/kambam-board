@@ -48,10 +48,10 @@ describe('GET /api/search', () => {
   it('returns cards matching query', async () => {
     mockPrisma.card.findMany.mockResolvedValue([
       {
-        id: 'c1', title: 'Fix bug', description: 'details', responsible: 'Ana',
-        columnId: 'col1', sprintId: null,
-        column: { title: 'A Fazer' },
-        sprint: null,
+        id: 'c1', title: 'Fix bug', description: 'details',
+        sprintId: 's1',
+        sprint: { name: 'Sprint 1' },
+        sprintColumn: { title: 'A Fazer' },
         tags: [],
       },
     ])
@@ -62,17 +62,10 @@ describe('GET /api/search', () => {
     expect(data.results[0].title).toBe('Fix bug')
   })
 
-  it('limits results to 20', async () => {
-    const manyCards = Array.from({ length: 25 }, (_, i) => ({
-      id: `c${i}`, title: `Card ${i}`, description: '', responsible: '',
-      columnId: 'col1', sprintId: null,
-      column: { title: 'A Fazer' },
-      sprint: null,
-      tags: [],
-    }))
-    mockPrisma.card.findMany.mockResolvedValue(manyCards)
-    const res = await GET(makeRequest('card'))
-    const data = await res.json()
-    expect(data.results.length).toBeLessThanOrEqual(20)
+  it('queries with take: 20 to limit results', async () => {
+    mockPrisma.card.findMany.mockResolvedValue([])
+    await GET(makeRequest('card'))
+    const callArgs = mockPrisma.card.findMany.mock.calls[0][0]
+    expect(callArgs.take).toBe(20)
   })
 })

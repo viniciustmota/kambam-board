@@ -20,11 +20,13 @@ const mockPrisma = prisma as {
   }
 }
 
-const columns = [
+const sprintColumns = [
   { id: 'col-todo', title: 'A Fazer' },
   { id: 'col-doing', title: 'Em Andamento' },
   { id: 'col-done', title: 'Concluído' },
 ]
+
+const SPRINT_ID = 'sprint-1'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -69,10 +71,10 @@ describe('parseCsvBuffer — Portuguese header normalization', () => {
     expect(rows[0].description).toBe('Detalhes aqui')
   })
 
-  it('maps "Responsável" header to responsible field', () => {
+  it('preserves "Responsável" header as-is (not mapped to card field)', () => {
     const csv = 'Nome,Responsável\nTask,Maria'
     const rows = parseCsvBuffer(csv)
-    expect(rows[0].responsible).toBe('Maria')
+    expect(rows[0].title).toBe('Task')
   })
 
   it('maps "Data de Vencimento" header to endDate field', () => {
@@ -85,7 +87,6 @@ describe('parseCsvBuffer — Portuguese header normalization', () => {
     const csv = 'Nome,Data de Vencimento,Descrição,Prioridade,Responsável,Status,Tags\n13Q9A1H - Erro upload de PDFs,31 de março de 2026,,Alta,Marcio Piva Junior,Concluído,'
     const rows = parseCsvBuffer(csv)
     expect(rows[0].title).toBe('13Q9A1H - Erro upload de PDFs')
-    expect(rows[0].responsible).toBe('Marcio Piva Junior')
     expect(rows[0].status).toBe('Concluído')
   })
 
@@ -111,33 +112,33 @@ describe('parseCsvBuffer — Portuguese header normalization', () => {
 })
 
 describe('mapRowToCardData', () => {
-  it('maps status "A Fazer" to correct columnId', () => {
-    const result = mapRowToCardData({ title: 'Task', status: 'A Fazer' }, columns, [], 0)
-    expect(result.columnId).toBe('col-todo')
+  it('maps status "A Fazer" to correct sprintColumnId', () => {
+    const result = mapRowToCardData({ title: 'Task', status: 'A Fazer' }, SPRINT_ID, sprintColumns, 0)
+    expect(result.sprintColumnId).toBe('col-todo')
   })
 
   it('maps status case-insensitively', () => {
-    const result = mapRowToCardData({ title: 'Task', status: 'a fazer' }, columns, [], 0)
-    expect(result.columnId).toBe('col-todo')
+    const result = mapRowToCardData({ title: 'Task', status: 'a fazer' }, SPRINT_ID, sprintColumns, 0)
+    expect(result.sprintColumnId).toBe('col-todo')
   })
 
   it('falls back to first column for unknown status', () => {
-    const result = mapRowToCardData({ title: 'Task', status: 'Unknown' }, columns, [], 0)
-    expect(result.columnId).toBe('col-todo')
+    const result = mapRowToCardData({ title: 'Task', status: 'Unknown' }, SPRINT_ID, sprintColumns, 0)
+    expect(result.sprintColumnId).toBe('col-todo')
   })
 
   it('uses empty string status → falls back to first column', () => {
-    const result = mapRowToCardData({ title: 'Task' }, columns, [], 0)
-    expect(result.columnId).toBe('col-todo')
+    const result = mapRowToCardData({ title: 'Task' }, SPRINT_ID, sprintColumns, 0)
+    expect(result.sprintColumnId).toBe('col-todo')
   })
 
-  it('maps responsible field to responsible on card', () => {
-    const result = mapRowToCardData({ title: 'Task', responsible: 'Maria' }, columns, [], 0)
-    expect(result.responsible).toBe('Maria')
+  it('sets sprintId on result', () => {
+    const result = mapRowToCardData({ title: 'Task' }, SPRINT_ID, sprintColumns, 0)
+    expect(result.sprintId).toBe(SPRINT_ID)
   })
 
   it('sets position correctly based on index', () => {
-    const result = mapRowToCardData({ title: 'Task' }, columns, [], 3)
+    const result = mapRowToCardData({ title: 'Task' }, SPRINT_ID, sprintColumns, 3)
     expect(result.position).toBe(3)
   })
 })
@@ -148,7 +149,7 @@ describe('importCsvRows', () => {
     mockPrisma.card.createMany.mockResolvedValue({ count: 2 })
 
     const csv = 'title,status\nFix bug,A Fazer\nAdd feature,Em Andamento'
-    const result = await importCsvRows(csv, columns, [])
+    const result = await importCsvRows(csv, SPRINT_ID, sprintColumns)
     expect(result.imported).toBe(2)
     expect(mockPrisma.card.createMany).toHaveBeenCalledOnce()
   })
@@ -158,7 +159,7 @@ describe('importCsvRows', () => {
     mockPrisma.card.createMany.mockResolvedValue({ count: 1 })
 
     const csv = 'title,status\nValid task,A Fazer\n,A Fazer'
-    const result = await importCsvRows(csv, columns, [])
+    const result = await importCsvRows(csv, SPRINT_ID, sprintColumns)
     expect(result.imported).toBe(1)
     expect(result.errors.length).toBeGreaterThan(0)
     expect(result.errors[0].row).toBe(2)
@@ -169,7 +170,7 @@ describe('importCsvRows', () => {
     mockPrisma.card.createMany.mockResolvedValue({ count: 2 })
 
     const csv = 'title\nTask 1\nTask 2'
-    await importCsvRows(csv, columns, [])
+    await importCsvRows(csv, SPRINT_ID, sprintColumns)
     const createCall = mockPrisma.card.createMany.mock.calls[0][0]
     expect(createCall.data[0].position).toBe(8)
     expect(createCall.data[1].position).toBe(9)
@@ -177,7 +178,7 @@ describe('importCsvRows', () => {
 
   it('returns empty imported and no errors for empty CSV', async () => {
     mockPrisma.card.findMany.mockResolvedValue([])
-    const result = await importCsvRows('', columns, [])
+    const result = await importCsvRows('', SPRINT_ID, sprintColumns)
     expect(result.imported).toBe(0)
     expect(result.errors).toHaveLength(0)
   })

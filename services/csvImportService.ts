@@ -1,16 +1,10 @@
 import Papa from 'papaparse'
-import { v4 as uuidv4 } from 'uuid'
 import prisma from '@/lib/prisma'
 import { CsvRowSchema } from '@/lib/validation/csvSchemas'
 
-export interface ColumnRef {
+export interface SprintColumnRef {
   id: string
   title: string
-}
-
-export interface SprintRef {
-  id: string
-  name: string
 }
 
 export interface ImportResult {
@@ -24,7 +18,6 @@ const PT_MONTHS: Record<string, string> = {
   setembro: '09', outubro: '10', novembro: '11', dezembro: '12',
 }
 
-// "31 de março de 2026" → "2026-03-31"
 function normalizePortugueseDate(value: string): string {
   const m = value.trim().toLowerCase().match(/^(\d{1,2})\s+de\s+(.+?)\s+de\s+(\d{4})$/)
   if (!m) return value
@@ -36,7 +29,6 @@ function normalizePortugueseDate(value: string): string {
 
 const DATE_FIELDS = new Set(['startDate', 'endDate'])
 
-// Maps common Portuguese/alternate header names to schema keys
 const HEADER_MAP: Record<string, string> = {
   nome: 'title',
   título: 'title',
@@ -44,8 +36,6 @@ const HEADER_MAP: Record<string, string> = {
   tarefa: 'title',
   descrição: 'description',
   descricao: 'description',
-  responsável: 'responsible',
-  responsavel: 'responsible',
   'data de vencimento': 'endDate',
   'data final': 'endDate',
   'data de fim': 'endDate',
@@ -54,7 +44,6 @@ const HEADER_MAP: Record<string, string> = {
   'data inicial': 'startDate',
   cor: 'color',
   etiquetas: 'tags',
-  // lowercase exact-match passthrough handled below
 }
 
 function normalizeHeaders(rows: Record<string, string>[]): Record<string, string>[] {
@@ -82,28 +71,24 @@ export function parseCsvBuffer(csv: string): Record<string, string>[] {
 
 export function mapRowToCardData(
   row: Record<string, string | undefined>,
-  columns: ColumnRef[],
-  sprints: SprintRef[],
+  sprintId: string,
+  sprintColumns: SprintColumnRef[],
   index: number,
   basePosition = 0,
 ) {
   const status = (row.status ?? '').trim().toLowerCase()
   const matchedColumn =
-    columns.find((col) => col.title.toLowerCase().includes(status) || status.includes(col.title.toLowerCase())) ??
-    columns[0]
-
-  const sprintName = (row.sprint ?? '').trim().toLowerCase()
-  const matchedSprint = sprints.find((s) => s.name.toLowerCase() === sprintName)
+    sprintColumns.find((col) => col.title.toLowerCase().includes(status) || status.includes(col.title.toLowerCase())) ??
+    sprintColumns[0]
 
   return {
-    id: uuidv4(),
     title: (row.title ?? '').trim(),
     description: (row.description ?? '').trim(),
-    responsible: (row.responsible ?? '').trim(),
     color: (row.color ?? '#6b7280').trim(),
     position: basePosition + index,
-    columnId: matchedColumn.id,
-    sprintId: matchedSprint?.id ?? null,
+    sprintId,
+    sprintColumnId: matchedColumn?.id ?? null,
+    sprintPosition: basePosition + index,
     tagsImport: (row.tags ?? '').trim(),
     startDate: row.startDate ? new Date(row.startDate) : null,
     endDate: row.endDate ? new Date(row.endDate) : null,
@@ -112,14 +97,14 @@ export function mapRowToCardData(
 
 export async function importCsvRows(
   csv: string,
-  columns: ColumnRef[],
-  sprints: SprintRef[],
+  sprintId: string,
+  sprintColumns: SprintColumnRef[],
 ): Promise<ImportResult> {
   const rows = parseCsvBuffer(csv)
   if (rows.length === 0) return { imported: 0, errors: [] }
 
   const existingCards = await prisma.card.findMany({
-    where: { columnId: { in: columns.map((c) => c.id) } },
+    where: { sprintId },
     select: { position: true },
     orderBy: { position: 'desc' },
   })
@@ -134,7 +119,7 @@ export async function importCsvRows(
       errors.push({ row: i + 1, message: parsed.error.issues[0].message })
       return
     }
-    validCards.push(mapRowToCardData(row, columns, sprints, validCards.length, maxPosition + 1))
+    validCards.push(mapRowToCardData(row, sprintId, sprintColumns, validCards.length, maxPosition + 1))
   })
 
   if (validCards.length > 0) {

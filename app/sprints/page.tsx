@@ -1,20 +1,18 @@
-import { getOrCreateBoard } from '@/app/actions'
 import { getSprintsWithMetricsAction } from '@/app/actions/dashboard'
-import { getOrphanCardCountAction } from '@/app/actions/migration'
 import { getCurrentUserAction } from '@/app/actions/users'
+import { verifySession } from '@/lib/dal'
 import prisma from '@/lib/prisma'
 import SprintListPage from '@/components/sprint/SprintListPage'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SprintsPage() {
-  const { boardId } = await getOrCreateBoard()
+  const { userId } = await verifySession()
 
-  const [result, orphanCount, currentUser, tags] = await Promise.all([
-    getSprintsWithMetricsAction(boardId),
-    getOrphanCardCountAction(boardId),
+  const [result, currentUser, tags] = await Promise.all([
+    getSprintsWithMetricsAction(),
     getCurrentUserAction(),
-    prisma.tag.findMany({ where: { boardId }, select: { id: true, name: true, color: true } }),
+    prisma.tag.findMany({ where: { userId }, select: { id: true, name: true, color: true } }),
   ])
 
   const sprintsWithMetrics = Array.isArray(result) ? result.map(item => ({
@@ -28,8 +26,6 @@ export default async function SprintsPage() {
   return (
     <SprintListPage
       sprintsWithMetrics={sprintsWithMetrics}
-      boardId={boardId}
-      orphanCount={orphanCount}
       currentUser={currentUser}
       tags={tags}
     />

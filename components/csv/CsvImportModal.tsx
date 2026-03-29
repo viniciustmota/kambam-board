@@ -10,13 +10,13 @@ interface ImportResult {
 }
 
 interface CsvImportModalProps {
-  boardId: string
+  sprintId: string
   isOpen: boolean
   onClose: () => void
   onImported?: () => void
 }
 
-export function CsvImportModal({ boardId, isOpen, onClose, onImported }: CsvImportModalProps) {
+export function CsvImportModal({ sprintId, isOpen, onClose, onImported }: CsvImportModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export function CsvImportModal({ boardId, isOpen, onClose, onImported }: CsvImpo
 
     try {
       const form = new FormData()
-      form.set('boardId', boardId)
+      form.set('sprintId', sprintId)
       form.set('file', file)
       const res = await fetch('/api/csv', { method: 'POST', body: form })
       const data = await res.json()
@@ -56,7 +56,7 @@ export function CsvImportModal({ boardId, isOpen, onClose, onImported }: CsvImpo
         <p className="text-sm text-gray-600">
           Importe tarefas a partir de um arquivo CSV. Campos suportados:{' '}
           <code className="rounded bg-gray-100 px-1 text-xs">
-            title, description, responsible, status, sprint, tags, startDate, endDate, color
+            title, description, status, tags, startDate, endDate, color
           </code>
         </p>
 

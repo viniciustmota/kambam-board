@@ -5,10 +5,10 @@ const SprintStatusEnum = z.enum(['PLANNED', 'ACTIVE', 'COMPLETED'])
 export const SprintCreateSchema = z
   .object({
     name: z.string().trim().min(1, 'Nome do sprint é obrigatório'),
-    boardId: z.string().min(1, 'boardId é obrigatório'),
     status: SprintStatusEnum.optional(),
     startDate: z.coerce.date().optional(),
     endDate: z.coerce.date().optional(),
+    createdBy: z.string().optional(),
   })
   .refine(
     (data) => {

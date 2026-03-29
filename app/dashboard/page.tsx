@@ -1,9 +1,10 @@
 import { getDashboardDataAction } from '@/app/actions/dashboard'
-import { getOrCreateBoard } from '@/app/actions'
 import KPICard from '@/components/dashboard/KPICard'
 import SprintCostChart from '@/components/dashboard/SprintCostChart'
 import UserHoursChart from '@/components/dashboard/UserHoursChart'
 import UserRankingTable from '@/components/dashboard/UserRankingTable'
+import MemberMetricsTable from '@/components/dashboard/MemberMetricsTable'
+import OverdueCardsList from '@/components/dashboard/OverdueCardsList'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -18,24 +19,23 @@ function formatCurrency(v: number) {
 }
 
 export default async function DashboardPage() {
-  const { boardId } = await getOrCreateBoard()
-  const result = await getDashboardDataAction(boardId)
+  const result = await getDashboardDataAction()
 
   if ('error' in result) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <p className="text-gray-500">{result.error}</p>
-        <Link href="/" className="text-blue-600 hover:underline text-sm">Voltar ao board</Link>
+        <Link href="/sprints" className="text-blue-600 hover:underline text-sm">Voltar às sprints</Link>
       </div>
     )
   }
 
-  const { kpis, userMetrics, sprintMetrics } = result
+  const { kpis, userMetrics, memberMetrics, overdueCards, sprintMetrics } = result
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4">
-        <Link href="/" className="text-gray-400 hover:text-gray-600 transition-colors">
+        <Link href="/sprints" className="text-gray-400 hover:text-gray-600 transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -44,7 +44,6 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard label="Sprints" value={kpis.totalSprints} color="blue" />
           <KPICard label="Cards" value={kpis.totalCards} color="purple" />
@@ -52,7 +51,6 @@ export default async function DashboardPage() {
           <KPICard label="Custo total" value={formatCurrency(kpis.custoTotal)} color="green" sub="baseado em valor/hora" />
         </div>
 
-        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Custo por Sprint</h2>
@@ -65,7 +63,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Sprint table */}
         {sprintMetrics.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Resumo por Sprint</h2>
@@ -94,11 +91,25 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* User ranking */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Ranking de Usuários</h2>
           <UserRankingTable users={userMetrics} />
         </div>
+
+        {memberMetrics.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Métricas por Membro</h2>
+            <MemberMetricsTable members={memberMetrics} />
+          </div>
+        )}
+
+        {overdueCards.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-1">Tarefas Pendentes / Atrasadas</h2>
+            <p className="text-sm text-gray-400 mb-4">{overdueCards.length} card{overdueCards.length !== 1 ? 's' : ''} com prazo vencido</p>
+            <OverdueCardsList cards={overdueCards} />
+          </div>
+        )}
       </main>
     </div>
   )
