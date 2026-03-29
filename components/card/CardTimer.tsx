@@ -130,7 +130,8 @@ export default function CardTimer({ cardId }: CardTimerProps) {
         </span>
         {isRunning ? (
           <button
-            onClick={handlePause}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handlePause() }}
             disabled={loading}
             aria-label="Pausar timer"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors disabled:opacity-50"
@@ -142,7 +143,8 @@ export default function CardTimer({ cardId }: CardTimerProps) {
           </button>
         ) : (
           <button
-            onClick={handleStart}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleStart() }}
             disabled={loading}
             aria-label="Iniciar timer"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-50"
@@ -154,7 +156,8 @@ export default function CardTimer({ cardId }: CardTimerProps) {
           </button>
         )}
         <button
-          onClick={() => { setShowManual(v => !v); setManualError('') }}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowManual(v => !v); setManualError('') }}
           className="text-xs text-gray-500 hover:text-blue-600 border border-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
         >
           Adicionar manualmente
@@ -187,14 +190,16 @@ export default function CardTimer({ cardId }: CardTimerProps) {
             />
           </div>
           <button
-            onClick={handleManualSave}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleManualSave() }}
             disabled={loading}
             className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             Salvar
           </button>
           <button
-            onClick={() => setShowManual(false)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowManual(false) }}
             className="px-3 py-1.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
           >
             Cancelar
