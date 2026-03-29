@@ -43,6 +43,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       <div
         ref={dialogRef}
         className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 id="modal-title" className="text-lg font-semibold text-gray-900">{title}</h2>
